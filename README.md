@@ -1,6 +1,7 @@
 # csgo_gc
 
 ⚠️ **Warning:** This project is incomplete and not ready for general use.
+⚠️ **Warning:** This repository is fork [mikkokko csgo_gc](https://github.com/mikkokko/csgo_gc) with custom features.
 
 ## What is this?
 In Valve games, the Game Coordinator (GC) is a backend service most notably responsible for matchmaking and inventory management (like loadouts and skins). This project redirects the GC traffic to a custom, in-process implementation.
@@ -25,8 +26,8 @@ While it's still possible to connect CS:GO to CS2's GC by spoofing the version n
 ## Planned features
 - Rest of the core features (trade ups, souvenirs, StatTrak swaps...)
 - In-game store
-- Graphical inventory editor
-- A tool to copy your CS2 inventory over
+- Profiles of other players
+- Operation Hub
 
 ## Not planned
 - Matchmaking (can't be implemented without a centralized server)
@@ -40,11 +41,8 @@ While it's still possible to connect CS:GO to CS2's GC by spoofing the version n
 734 3106517550092294329
 740 1512455234357538911
 ```
-- Download the latest artifacts for your platform from the [actions page](https://github.com/mikkokko/csgo_gc/actions)
-- Back up your existing launcher executables as they'll be overwritten (i.e. csgo.exe, srcds.exe, csgo_linux64, etc.)
-- Extract the contents of the downloaded archive to your game directory, replace the executables when prompted
-- Launch the game. If you get the annoying VAC message box, launch the game with the -steam argument.
-
+- Clone latest version with git and build it.
+  
 ## Building
 Requirements:
 - Git
