@@ -28,8 +28,19 @@ public:
     int CommendedLeader() const { return m_commendedLeader; }
     int Level() const { return m_level; }
     int Xp() const { return m_xp; }
+    
+    int StoreVault() const { return m_store_vault; }
+    std::string Country() const { return m_country; }
+
+    int isPenaltyEnabled() const { return m_enable_penalty; }
+    int PenaltyReason() const { return m_penalty_reason; }
+    int PenaltyTime() const { return m_penalty_time; }
+
+    int TournamentEvent() const { return m_tournament_event; }
 
     float GetRarityWeight(uint32_t rarity) const;
+
+    int GetProfile(uint32_t profileID, const std::string &key);
 
 private:
     RankId m_competitiveRank{ RankNone };
@@ -47,6 +58,15 @@ private:
     int m_commendedLeader{ 0 };
     int m_level{ 0 };
     int m_xp{ 0 };
+
+    int m_store_vault{ 2 };
+    std::string m_country{ "FI" };
+
+    bool m_enable_penalty{ false };
+    int m_penalty_reason{ 0 };
+    int m_penalty_time{ 0 };
+
+    int m_tournament_event{ 20 };
 
     std::vector<RarityWeight> m_rarityWeights;
 };

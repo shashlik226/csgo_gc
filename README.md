@@ -23,11 +23,11 @@ While it's still possible to connect CS:GO to CS2's GC by spoofing the version n
 - Functional lobbies
 - Dedicated server support
 - Networking using Steam's P2P interface
+- Profiles of other players
 
 ## Planned features
 - Rest of the core features (trade ups, souvenirs, StatTrak swaps...)
 - In-game store
-- Profiles of other players
 - Operation Hub
 
 ## Not planned
@@ -42,7 +42,10 @@ While it's still possible to connect CS:GO to CS2's GC by spoofing the version n
 734 3106517550092294329
 740 1512455234357538911
 ```
-- Clone latest version with git and build it.
+- Download the latest artifacts for your platform from the [actions page](https://github.com/shashlik226/csgo_gc/actions)
+- Back up your existing launcher executables as they'll be overwritten (i.e. csgo.exe, srcds.exe, csgo_linux64, etc.)
+- Extract the contents of the downloaded archive to your game directory, replace the executables when prompted
+- Launch the game. If you get the annoying VAC message box, launch the game with the -steam argument.
   
 ## Building
 Requirements:

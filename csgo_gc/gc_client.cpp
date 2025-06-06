@@ -64,6 +64,11 @@ void ClientGC::HandleMessage(uint32_t type, const void *data, uint32_t size)
         case k_EMsgGCStoreGetUserData:
             StoreGetUserData(messageRead);
             break;
+        
+        case k_EMsgGCCStrike15_v2_ClientRequestPlayersProfile:
+            LoadPlayerProfile(messageRead);
+            break;
+        
 
         default:
             Platform::Print("ClientGC::HandleMessage: unhandled protobuf message %s\n",
@@ -179,18 +184,22 @@ void ClientGC::BuildMatchmakingHello(CMsgGCCStrike15_v2_MatchmakingGC2ClientHell
     message.mutable_global_stats()->set_search_time_avg(0);
 
     // don't write search_statistics
-
     message.mutable_global_stats()->set_main_post_url("");
 
     // bullshit
     message.mutable_global_stats()->set_required_appid_version(13857);
     message.mutable_global_stats()->set_pricesheet_version(1680057676); // mikkotodo revisit
     message.mutable_global_stats()->set_twitch_streams_version(2);
-    message.mutable_global_stats()->set_active_tournament_eventid(20);
+    message.mutable_global_stats()->set_active_tournament_eventid(m_config.TournamentEvent());
     message.mutable_global_stats()->set_active_survey_id(0);
     message.mutable_global_stats()->set_required_appid_version2(13862); // csgo s2
 
     message.set_vac_banned(m_config.VacBanned());
+    if (m_config.isPenaltyEnabled() && !m_config.VacBanned())
+    {
+        message.set_penalty_reason(m_config.PenaltyReason());
+        message.set_penalty_seconds(m_config.PenaltyTime());
+    }
     message.mutable_commendation()->set_cmd_friendly(m_config.CommendedFriendly());
     message.mutable_commendation()->set_cmd_teaching(m_config.CommendedTeaching());
     message.mutable_commendation()->set_cmd_leader(m_config.CommendedLeader());
@@ -207,11 +216,11 @@ void ClientGC::BuildClientWelcome(CMsgClientWelcome &message, const CMsgCStrike1
     m_inventory.BuildCacheSubscription(*message.add_outofdate_subscribed_caches(), m_config.Level(), false);
     message.mutable_location()->set_latitude(65.0133006f);
     message.mutable_location()->set_longitude(25.4646212f);
-    message.mutable_location()->set_country("FI"); // finland
+    message.mutable_location()->set_country(m_config.Country());
     message.set_game_data2(matchmakingHello.SerializeAsString());
     message.set_rtime32_gc_welcome_timestamp(static_cast<uint32_t>(time(nullptr)));
-    message.set_currency(2); // euros
-    message.set_txn_country_code("FI"); // finland
+    message.set_currency(m_config.StoreVault());
+    message.set_txn_country_code(m_config.Country());
 }
 
 void ClientGC::SendRankUpdate()
@@ -238,7 +247,6 @@ void ClientGC::SendRankUpdate()
 
     SendMessageToGame(false, k_EMsgGCCStrike15_v2_ClientGCRankUpdate, message);
 }
-
 void ClientGC::OnClientHello(GCMessageRead &messageRead)
 {
     CMsgClientHello hello;
@@ -619,6 +627,56 @@ void ClientGC::RemoveItemName(GCMessageRead &messageRead)
     {
         assert(false);
     }
+}
+
+void ClientGC::LoadPlayerProfile(GCMessageRead &messageRead)
+{
+    CMsgGCCStrike15_v2_ClientRequestPlayersProfile message;
+    if (!messageRead.ReadProtobuf(message))
+    {
+        Platform::Print("Parsing CMsgGCCStrike15_v2_ClientRequestPlayersProfile failed, ignoring\n");
+        return;
+    }
+
+    Platform::Print("[Profile] AccountID: %u\n", message.account_id());
+    Platform::Print("[Profile] RequestLevel: %u\n", message.request_level());
+
+    uint32_t profileID = message.account_id();
+
+    CMsgGCCStrike15_v2_PlayersProfile profile;
+    profile.set_request_id(profileID);
+
+    CMsgGCCStrike15_v2_MatchmakingGC2ClientHello* newProfile = profile.add_account_profiles();
+
+    newProfile->set_account_id(profileID);
+    newProfile->mutable_commendation()->set_cmd_friendly(m_config.GetProfile(profileID, "cmd_friendly"));
+    newProfile->mutable_commendation()->set_cmd_teaching(m_config.GetProfile(profileID, "cmd_teaching"));
+    newProfile->mutable_commendation()->set_cmd_leader(m_config.GetProfile(profileID, "cmd_leader"));
+    newProfile->set_player_level(m_config.GetProfile(profileID, "player_level"));
+    newProfile->set_player_cur_xp(m_config.GetProfile(profileID, "player_cur_xp"));
+
+    PlayerRankingInfo *rank = new PlayerRankingInfo();
+    rank->set_account_id(profileID);
+    rank->set_rank_id(m_config.GetProfile(profileID, "competitive_rank"));
+    rank->set_wins(m_config.GetProfile(profileID, "competitive_wins"));
+    rank->set_rank_type_id(RankTypeCompetitive); 
+    newProfile->set_allocated_ranking(rank);
+
+    rank = new PlayerRankingInfo();
+    rank->set_account_id(profileID);
+    rank->set_rank_id(m_config.GetProfile(profileID, "wingman_rank"));
+    rank->set_wins(m_config.GetProfile(profileID, "wingman_wins"));
+    rank->set_rank_type_id(RankTypeWingman);
+    newProfile->mutable_rankings()->AddAllocated(rank);
+
+    rank = new PlayerRankingInfo();
+    rank->set_account_id(profileID);
+    rank->set_rank_id(m_config.GetProfile(profileID, "dangerzone_rank"));
+    rank->set_wins(m_config.GetProfile(profileID, "dangerzone_wins"));
+    rank->set_rank_type_id(RankTypeDangerZone);
+    newProfile->mutable_rankings()->AddAllocated(rank);
+
+    SendMessageToGame(false, k_EMsgGCCStrike15_v2_PlayersProfile, profile);
 }
 
 const char *MessageName(uint32_t type)

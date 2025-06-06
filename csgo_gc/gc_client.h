@@ -46,6 +46,7 @@ private:
     void BuildClientWelcome(CMsgClientWelcome &message, const CMsgCStrike15Welcome &csWelcome,
         const CMsgGCCStrike15_v2_MatchmakingGC2ClientHello &matchmakingHello);
     void SendRankUpdate();
+    void LoadPlayerProfile(GCMessageRead &messageRead);
 
     uint32_t AccountId() const { return m_steamId & 0xffffffff; }
 

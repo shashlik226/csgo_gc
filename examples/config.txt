@@ -9,7 +9,6 @@
 	"dangerzone_wins"	"888"
 }
 
-"vac_banned"	"0"
 "cmd_friendly"	"666"
 "cmd_teaching"	"777"
 "cmd_leader"	"888"
@@ -30,3 +29,15 @@
 
 // remove keys, cases, stickers, etc. after they've been used
 "destroy_used_items"	"1"
+
+// store vault examples: 2 - eur; 3 - rub; 
+"store_vault"	"3"
+"country"	"RU"
+
+// bans
+"vac_banned"	"0"
+"enable_penalty" "0"
+"penalty_reason" "18"
+"penalty_time" "86400"
+
+"tournament_event" "19"
