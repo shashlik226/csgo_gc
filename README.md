@@ -1,6 +1,7 @@
 # csgo_gc
 
 ⚠️ **Warning:** This project is incomplete and not ready for general use.
+
 ⚠️ **Warning:** This repository is fork [mikkokko csgo_gc](https://github.com/mikkokko/csgo_gc) with custom features.
 
 ## What is this?
