@@ -80,7 +80,7 @@ option(CRYPTOPP_INSTALL "Generate the install target for this project." OFF)
 
 FetchContent_Declare(cryptopp-cmake
 	GIT_REPOSITORY https://github.com/abdes/cryptopp-cmake
-	GIT_TAG edb9a71bed2b663c996fded6a104714e05a113f9
+	GIT_TAG 866aceb8b13b6427a3c4541288ff412ad54f11ea
 	GIT_SHALLOW TRUE)
 
 FetchContent_MakeAvailable(cryptopp-cmake)
