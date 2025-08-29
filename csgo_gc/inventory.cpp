@@ -1078,6 +1078,21 @@ uint64_t Inventory::PurchaseItem(uint32_t defIndex, std::vector<CMsgSOSingleObje
     return item.id();
 }
 
+
+bool Inventory::DeleteItem(uint64_t itemId, CMsgSOSingleObject &destroy)
+{
+    auto it = m_items.find(itemId);
+    if (it == m_items.end())
+    {
+        assert(false);
+        return false;
+    }
+
+    DestroyItem(it, destroy);
+
+    return true;
+}
+
 bool Inventory::UnequipItem(uint64_t itemId, CMsgSOMultipleObjects &update)
 {
     uint32_t defIndex, paintKitIndex;

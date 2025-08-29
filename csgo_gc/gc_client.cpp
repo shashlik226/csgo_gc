@@ -101,6 +101,10 @@ void ClientGC::HandleMessage(uint32_t type, const void *data, uint32_t size)
             RemoveItemName(messageRead);
             break;
 
+        case k_EMsgGCDelete:
+            DeleteItem(messageRead);
+            break;
+
         default:
             Platform::Print("ClientGC::HandleMessage: unhandled struct message %s\n",
                 MessageName(messageRead.TypeUnmasked()));
@@ -112,6 +116,31 @@ void ClientGC::HandleMessage(uint32_t type, const void *data, uint32_t size)
 void ClientGC::Update()
 {
     m_networking.Update();
+}
+
+void ClientGC::DeleteItem(GCMessageRead &messageRead)
+{
+    uint64_t itemId = messageRead.ReadUint64();
+    if (!messageRead.IsValid())
+    {
+        Platform::Print("Parsing DeleteItem failed, ignoring\n");
+        return;
+    }
+
+    CMsgSOSingleObject destroy;
+
+    if (m_inventory.DeleteItem(itemId, destroy))
+    {
+        if (destroy.has_type_id())
+        {
+            SendMessageToGame(true, k_ESOMsg_Destroy, destroy);
+        }
+        else
+        {
+            Platform::Print("Can't delete item\n");
+        }
+    }
+    
 }
 
 bool ClientGC::GetMicroTransactionResponse(MicroTxnAuthorizationResponse_t &response)

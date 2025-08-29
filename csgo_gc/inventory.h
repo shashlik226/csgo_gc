@@ -71,6 +71,8 @@ public:
     // on failure returns 0 and does nothing
     uint64_t PurchaseItem(uint32_t defIndex, std::vector<CMsgSOSingleObject> &update);
 
+    bool DeleteItem(uint64_t itemId, CMsgSOSingleObject &destroy);
+
 private:
     uint32_t AccountId() const;
 
