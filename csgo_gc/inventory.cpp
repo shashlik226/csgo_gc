@@ -199,7 +199,6 @@ void Inventory::ReadItem(const KeyValue &itemKey, CSOEconItem &item) const
     // id and account_id were set by CreateItem
     item.set_inventory(itemKey.GetNumber<uint32_t>("inventory"));
     item.set_def_index(itemKey.GetNumber<uint32_t>("def_index"));
-    //item.set_quantity(itemKey.GetNumber<uint32_t>("quantity"));
     item.set_quantity(1);
     item.set_level(itemKey.GetNumber<uint32_t>("level"));
     item.set_quality(itemKey.GetNumber<uint32_t>("quality"));
@@ -211,16 +210,7 @@ void Inventory::ReadItem(const KeyValue &itemKey, CSOEconItem &item) const
     {
         item.set_custom_name(std::string{ name });
     }
-
-    //std::string_view desc = itemKey.GetString("custom_desc");
-    //if (desc.size())
-    //{
-    //    item.set_custom_desc(std::string{ desc });
-    //}
-
     item.set_in_use(itemKey.GetNumber<int>("in_use"));
-    //item.set_style(itemKey.GetNumber<uint32_t>("style"));
-    //item.set_original_id(itemKey.GetNumber<uint64_t>("original_id"));
     item.set_rarity(itemKey.GetNumber<uint32_t>("rarity"));
 
     const KeyValue *attributesKey = itemKey.GetSubkey("attributes");
@@ -281,18 +271,14 @@ void Inventory::WriteItem(KeyValue &itemKey, const CSOEconItem &item) const
 {
     itemKey.AddNumber("inventory", item.inventory());
     itemKey.AddNumber("def_index", item.def_index());
-    //itemKey.AddNumber("quantity", item.quantity());
     itemKey.AddNumber("level", item.level());
     itemKey.AddNumber("quality", item.quality());
     itemKey.AddNumber("flags", item.flags());
     itemKey.AddNumber("origin", item.origin());
 
     itemKey.AddString("custom_name", item.custom_name());
-    //itemKey.AddString("custom_desc", item.custom_desc());
 
     itemKey.AddNumber("in_use", item.in_use());
-    //itemKey.AddNumber("style", item.style());
-    //itemKey.AddNumber("original_id", item.original_id());
     itemKey.AddNumber("rarity", item.rarity());
 
     KeyValue &attributesKey = itemKey.AddSubkey("attributes");

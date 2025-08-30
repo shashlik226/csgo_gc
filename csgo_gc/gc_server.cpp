@@ -41,6 +41,12 @@ void ServerGC::HandleMessage(uint32_t type, const void *data, uint32_t size)
             // server doesn't want a response so ignore
             break;
 
+        case k_EMsgGCCStrike15_v2_MatchmakingServerReservationResponse:
+            break;
+
+        case k_EMsgGCCStrike15_v2_ServerVarValueNotificationInfo:
+            break;
+
         case k_EMsgGC_IncrementKillCountAttribute:
             IncrementKillCountAttribute(messageRead);
             break;

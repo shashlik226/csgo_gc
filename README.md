@@ -46,6 +46,7 @@ I'm still looking for the **full** CS:GO Item Schema. If you have a relatively r
 - Download the latest artifacts for your platform from the [actions page](https://github.com/mikkokko/csgo_gc/actions)
 - Back up your existing launcher executables as they'll be overwritten (i.e. csgo.exe, srcds.exe, csgo_linux64, etc.)
 - Extract the contents of the downloaded archive to your game directory, replace the executables when prompted
+- Copy **csgo/scripts/items/items_game.txt** to **csgo_gc/item_schema.txt**
 - Launch the game. If you get the annoying VAC message box, launch the game with the -steam argument.
 
 ## Building

@@ -112,7 +112,7 @@ uint32_t LootListItem::CaseRarity() const
 ItemSchema::ItemSchema()
 {
     KeyValue itemSchema{ "root" };
-    if (!itemSchema.ParseFromFile("csgo/scripts/items/items_game.txt"))
+    if (!itemSchema.ParseFromFile("csgo_gc/item_schema.txt"))
     {
         assert(false);
         return;
