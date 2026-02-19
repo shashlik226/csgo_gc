@@ -1,6 +1,7 @@
 # csgo_gc
 
 ⚠️ **Warning:** This project is incomplete and not ready for general use.
+
 ⚠️ **Warning:** Better use with my mod for this fork https://github.com/shashlik226/csgo-for-gc
 
 ## What is this?
