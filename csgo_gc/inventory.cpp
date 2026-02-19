@@ -6,7 +6,7 @@
 #include "keyvalue.h"
 #include "random.h"
 
-constexpr const char *InventoryFilePath = "csgo_gc/inventory.txt";
+constexpr const char *InventoryFilePath = "csgogc/gc/inventory.txt";
 
 // mikkotodo actual versioning
 constexpr uint64_t InventoryVersion = 7523377975160828514;
@@ -199,7 +199,6 @@ void Inventory::ReadItem(const KeyValue &itemKey, CSOEconItem &item) const
     // id and account_id were set by CreateItem
     item.set_inventory(itemKey.GetNumber<uint32_t>("inventory"));
     item.set_def_index(itemKey.GetNumber<uint32_t>("def_index"));
-    //item.set_quantity(itemKey.GetNumber<uint32_t>("quantity"));
     item.set_quantity(1);
     item.set_level(itemKey.GetNumber<uint32_t>("level"));
     item.set_quality(itemKey.GetNumber<uint32_t>("quality"));
@@ -211,16 +210,7 @@ void Inventory::ReadItem(const KeyValue &itemKey, CSOEconItem &item) const
     {
         item.set_custom_name(std::string{ name });
     }
-
-    //std::string_view desc = itemKey.GetString("custom_desc");
-    //if (desc.size())
-    //{
-    //    item.set_custom_desc(std::string{ desc });
-    //}
-
     item.set_in_use(itemKey.GetNumber<int>("in_use"));
-    //item.set_style(itemKey.GetNumber<uint32_t>("style"));
-    //item.set_original_id(itemKey.GetNumber<uint64_t>("original_id"));
     item.set_rarity(itemKey.GetNumber<uint32_t>("rarity"));
 
     const KeyValue *attributesKey = itemKey.GetSubkey("attributes");
@@ -281,18 +271,14 @@ void Inventory::WriteItem(KeyValue &itemKey, const CSOEconItem &item) const
 {
     itemKey.AddNumber("inventory", item.inventory());
     itemKey.AddNumber("def_index", item.def_index());
-    //itemKey.AddNumber("quantity", item.quantity());
     itemKey.AddNumber("level", item.level());
     itemKey.AddNumber("quality", item.quality());
     itemKey.AddNumber("flags", item.flags());
     itemKey.AddNumber("origin", item.origin());
 
     itemKey.AddString("custom_name", item.custom_name());
-    //itemKey.AddString("custom_desc", item.custom_desc());
 
     itemKey.AddNumber("in_use", item.in_use());
-    //itemKey.AddNumber("style", item.style());
-    //itemKey.AddNumber("original_id", item.original_id());
     itemKey.AddNumber("rarity", item.rarity());
 
     KeyValue &attributesKey = itemKey.AddSubkey("attributes");
@@ -985,9 +971,19 @@ bool Inventory::NameItem(uint64_t nameTagId,
 
     it->second.mutable_custom_name()->assign(name);
 
+    uint32_t defIdx = it->second.def_index();
+
+    if (defIdx == ItemSchema::ItemCasket)
+    {
+        if(!InitCasket(it->second))
+        {
+            return false;
+        }
+    }
+
     ToSingleObject(update, it->second);
 
-    if (m_config.DestroyUsedItems())
+    if (m_config.DestroyUsedItems() && defIdx != ItemSchema::ItemCasket)
     {
         auto tag = m_items.find(nameTagId);
         if (tag == m_items.end())
@@ -1068,6 +1064,244 @@ bool Inventory::RemoveItemName(uint64_t itemId,
     return true;
 }
 
+bool Inventory::EconPreviewBlock(uint32_t defIdx,
+    uint32_t prefabIdx,
+    uint32_t seedIdx,
+    CMsgSOSingleObject &create,
+    CMsgGCItemCustomizationNotification &notification)
+{
+    CSOEconItem temp;
+    m_itemSchema.CreateItem(defIdx, ItemOriginBaseItem, UnacknowledgedGifted, temp);
+    temp.set_quality(4);
+    temp.set_origin(2);
+
+    if (prefabIdx != 9999 && seedIdx != 9999 && !(defIdx == ItemSchema::ItemSticker || defIdx == ItemSchema::ItemMusicKit || defIdx == ItemSchema::ItemSpray || defIdx == ItemSchema::ItemPatch))
+    {
+        CSOEconItemAttribute *attribute = temp.add_attribute();
+        attribute->set_def_index(ItemSchema::AttributeTexturePrefab);
+        m_itemSchema.SetAttributeUint32(attribute, prefabIdx);
+
+        attribute = temp.add_attribute();
+        attribute->set_def_index(ItemSchema::AttributeTextureSeed);
+        m_itemSchema.SetAttributeUint32(attribute, seedIdx);
+
+        attribute = temp.add_attribute();
+        attribute->set_def_index(ItemSchema::AttributeTextureWear);
+        m_itemSchema.SetAttributeFloat(attribute, 0);
+
+        // attribute = temp.add_attribute();
+        // attribute->set_def_index(ItemSchema::AttributeKillEater);
+        // m_itemSchema.SetAttributeUint32(attribute, 0);
+
+        // attribute = temp.add_attribute();
+        // attribute->set_def_index(ItemSchema::AttributeKillEaterScoreType);
+        // m_itemSchema.SetAttributeUint32(attribute, 0);
+    }
+    else if (defIdx == ItemSchema::ItemSticker || defIdx == ItemSchema::ItemSpray || defIdx == ItemSchema::ItemPatch)
+    {
+        CSOEconItemAttribute *attribute = temp.add_attribute();
+        attribute->set_def_index(ItemSchema::AttributeStickerId0);
+        m_itemSchema.SetAttributeUint32(attribute, prefabIdx);
+    }
+    else if (defIdx == ItemSchema::ItemMusicKit)
+    {
+        CSOEconItemAttribute *attribute = temp.add_attribute();
+        attribute->set_def_index(ItemSchema::AttributeMusicId);
+        m_itemSchema.SetAttributeUint32(attribute, prefabIdx);
+    }
+
+    CSOEconItem &item = CreateItem(temp);
+
+    ToSingleObject(create, item);
+
+    // set notification
+    notification.add_item_id(item.id());
+    notification.set_request(k_EGCItemCustomizationNotification_UnlockCrate);
+
+    return true;
+}
+
+static void RemoveItemAttr(CSOEconItem &item, uint32_t attrIdx)
+{
+    for (auto attrib = item.mutable_attribute()->begin(); attrib != item.mutable_attribute()->end();)
+    {
+        if (attrib->def_index() == attrIdx)
+        {
+            attrib = item.mutable_attribute()->erase(attrib);
+        }
+        else
+        {
+            attrib++;
+        }
+    }
+}
+
+bool Inventory::InitCasket(CSOEconItem& item)
+{
+    for (const CSOEconItemAttribute &attribute : item.attribute())
+    {
+        if (attribute.def_index() == ItemSchema::AttributeCasketItemsCount)
+        {
+            return false;
+        }
+    }
+    
+    CSOEconItemAttribute *attribute = item.add_attribute();
+    attribute->set_def_index(ItemSchema::AttributeCasketItemsCount);
+    m_itemSchema.SetAttributeUint32(attribute, 0);
+
+    attribute = item.add_attribute();
+    attribute->set_def_index(ItemSchema::AttributeCasketModificationDate);
+    m_itemSchema.SetAttributeUint32(attribute, time(nullptr));
+
+    return true;
+}
+
+bool Inventory::UpdateCasket(CSOEconItem& item, int count)
+{
+    uint32_t itemsCount = 0;
+
+    for (const CSOEconItemAttribute &attribute : item.attribute())
+    {
+        if (attribute.def_index() == ItemSchema::AttributeCasketItemsCount)
+        {
+            itemsCount = m_itemSchema.AttributeUint32(&attribute);
+            itemsCount += count;
+        }
+    }
+
+    if (itemsCount > 1000 || itemsCount < 0)
+    {
+        Platform::Print("Unable to get count of items in casket or it full\n");
+        assert(false);
+        return false;
+    }
+
+    RemoveItemAttr(item, ItemSchema::AttributeCasketItemsCount);
+    RemoveItemAttr(item, ItemSchema::AttributeCasketModificationDate);
+
+    CSOEconItemAttribute *attribute = item.add_attribute();
+    attribute->set_def_index(ItemSchema::AttributeCasketItemsCount);
+    m_itemSchema.SetAttributeUint32(attribute, itemsCount);
+
+    attribute = item.add_attribute();
+    attribute->set_def_index(ItemSchema::AttributeCasketModificationDate);
+    m_itemSchema.SetAttributeUint32(attribute, time(nullptr));
+
+    return true;
+}
+
+bool Inventory::CasketItemAdd(uint64_t casketId, 
+    uint64_t itemId, 
+    CMsgSOSingleObject &updateItem,
+    CMsgSOSingleObject &updateCasket,
+    CMsgGCItemCustomizationNotification &notification)
+{
+    auto casket = m_items.find(casketId);
+    if (casket == m_items.end())
+    {
+        Platform::Print("Unable to find casket\n");
+        assert(false);
+        return false;
+    }
+
+    auto item = m_items.find(itemId);
+    if (item == m_items.end())
+    {
+        Platform::Print("Unable to find item\n");
+        assert(false);
+        return false;
+    }
+
+    uint32_t defIdx = casket->second.def_index();
+
+    if (defIdx != ItemSchema::ItemCasket)
+    {
+        Platform::Print("Casket not a casket\n");
+        assert(false);
+        return false;
+    }
+
+    if (!UpdateCasket(casket->second, 1))
+    {
+        notification.set_request(k_EGCItemCustomizationNotification_CasketTooFull);
+        notification.add_item_id(casketId);
+        return true;
+    }
+
+    uint32_t low = static_cast<uint32_t>(casketId);
+    uint32_t high = static_cast<uint32_t>(casketId >> 32);
+
+    // add low and high of casket to item
+    CSOEconItemAttribute *attribute = item->second.add_attribute();
+    attribute->set_def_index(ItemSchema::AttributeCasketIdLow);
+    m_itemSchema.SetAttributeUint32(attribute, low);
+
+    attribute = item->second.add_attribute();
+    attribute->set_def_index(ItemSchema::AttributeCasketIdHigh);
+    m_itemSchema.SetAttributeUint32(attribute, high);
+
+    item->second.clear_equipped_state();
+
+    ToSingleObject(updateItem, item->second);
+    ToSingleObject(updateCasket, casket->second);
+
+    notification.set_request(k_EGCItemCustomizationNotification_CasketAdded);
+    notification.add_item_id(casketId);
+
+    return true;
+}
+
+bool Inventory::CasketItemRemove(uint64_t casketId, 
+    uint64_t itemId, 
+    CMsgSOSingleObject &updateItem,
+    CMsgSOSingleObject &updateCasket,
+    CMsgGCItemCustomizationNotification &notification)
+{
+    auto casket = m_items.find(casketId);
+    if (casket == m_items.end())
+    {
+        Platform::Print("Unable to find casket\n");
+        assert(false);
+        return false;
+    }
+
+    auto item = m_items.find(itemId);
+    if (item == m_items.end())
+    {
+        Platform::Print("Unable to find item\n");
+        assert(false);
+        return false;
+    }
+
+    uint32_t defIdx = casket->second.def_index();
+
+    if (defIdx != ItemSchema::ItemCasket)
+    {
+        Platform::Print("Casket not a casket\n");
+        assert(false);
+        return false;
+    }
+
+    if (!UpdateCasket(casket->second, -1))
+    {
+        notification.set_request(k_EGCItemCustomizationNotification_CasketTooFull);
+        notification.add_item_id(casketId);
+        return true;
+    }
+
+    RemoveItemAttr(item->second, ItemSchema::AttributeCasketIdLow);
+    RemoveItemAttr(item->second, ItemSchema::AttributeCasketIdHigh);
+
+    ToSingleObject(updateItem, item->second);
+    ToSingleObject(updateCasket, casket->second);
+
+    notification.set_request(k_EGCItemCustomizationNotification_CasketRemoved);
+    notification.add_item_id(casketId);
+
+    return true;
+}
+
 uint64_t Inventory::PurchaseItem(uint32_t defIndex, std::vector<CMsgSOSingleObject> &update)
 {
     CSOEconItem &item = CreateItem(defIndex, ItemOriginPurchased, UnacknowledgedPurchased);
@@ -1076,6 +1310,33 @@ uint64_t Inventory::PurchaseItem(uint32_t defIndex, std::vector<CMsgSOSingleObje
     ToSingleObject(single, item);
 
     return item.id();
+}
+
+
+bool Inventory::DeleteItem(uint64_t itemId, CMsgSOSingleObject &destroy)
+{
+    auto it = m_items.find(itemId);
+    if (it == m_items.end())
+    {
+        assert(false);
+        return false;
+    }
+
+    DestroyItem(it, destroy);
+
+    return true;
+}
+
+bool Inventory::ClearInvenory(std::vector<CMsgSOSingleObject> &destroyArray)
+{
+    for (auto it = m_items.begin(); it != m_items.end(); ++it)
+    {
+        CMsgSOSingleObject destroy;
+        DestroyItem(it, destroy);
+        destroyArray.push_back(destroy);
+    }
+
+    return true;
 }
 
 bool Inventory::UnequipItem(uint64_t itemId, CMsgSOMultipleObjects &update)

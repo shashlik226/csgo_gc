@@ -112,7 +112,7 @@ uint32_t LootListItem::CaseRarity() const
 ItemSchema::ItemSchema()
 {
     KeyValue itemSchema{ "root" };
-    if (!itemSchema.ParseFromFile("csgo/scripts/items/items_game.txt"))
+    if (!itemSchema.ParseFromFile("csgogc/gc/item_schema.txt"))
     {
         assert(false);
         return;
@@ -166,7 +166,7 @@ ItemSchema::ItemSchema()
     {
         KeyValue unusualLootLists{ "unusual_loot_lists" };
 
-        if (unusualLootLists.ParseFromFile("csgo_gc/unusual_loot_lists.txt"))
+        if (unusualLootLists.ParseFromFile("csgogc/gc/unusual_loot_lists.txt"))
         {
             ParseLootLists(&unusualLootLists, true);
         }
@@ -394,7 +394,17 @@ const LootList *ItemSchema::GetCrateLootList(uint32_t crateDefIndex) const
         return nullptr;
     }
 
-    assert(itemSearch->second.m_supplyCrateSeries);
+    if (itemSearch->second.m_lootListName.size())
+    {
+        const auto lootListSearch = m_lootLists.find(itemSearch->second.m_lootListName);
+        if (lootListSearch == m_lootLists.end())
+        {
+            assert(false);
+            return nullptr;
+        }
+
+        return &lootListSearch->second;
+    }
 
     auto lootListSearch = m_revolvingLootLists.find(itemSearch->second.m_supplyCrateSeries);
     if (lootListSearch == m_revolvingLootLists.end())
@@ -426,7 +436,7 @@ bool ItemSchema::CreateItemFromLootListItem(Random &random,
     }
     else
     {
-        item.set_quality(lootListItem.quality);
+        item.set_quality(4);
     }
 
     // rarity override
@@ -582,12 +592,6 @@ void ItemSchema::ParseItems(const KeyValue *itemsKey, const KeyValue *prefabsKey
         auto &itemInfo = emplace.first->second;
         if (!itemInfo.m_isCoupon)
         {
-            // FIXME: self opening purchases
-            if (itemInfo.m_lootListName.size())
-            {
-                Platform::Print("Non coupon item associated loot list in %s!!!\n", itemInfo.m_name.c_str());
-            }
-
             //assert(!itemInfo.m_lootListName.size());
             assert(!itemInfo.m_willProduceStatTrak);
         }
@@ -636,7 +640,6 @@ void ItemSchema::ParseItemRecursive(ItemInfo &info, const KeyValue &itemKey, con
     {
         if (prefabName == "valve coupon_prefab")
         {
-            Platform::Print("WARNING: valve coupon_prefab kludge!!!\n");
             prefabName = "coupon_prefab";
         }
 

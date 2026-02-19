@@ -19,7 +19,7 @@ public:
 
     void Update();
 
-    void SendMessage(const GCMessageWrite &message);
+    void SendNetworkMessage(const GCMessageWrite &message);
 
     // for gameserver validation
     void SetAuthTicket(uint32_t handle, const void *data, uint32_t size);

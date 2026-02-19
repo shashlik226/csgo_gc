@@ -97,7 +97,7 @@ bool NetworkingClient::HandleMessage(uint64_t steamId, GCMessageRead &message)
     return false;
 }
 
-void NetworkingClient::SendMessage(const GCMessageWrite &message)
+void NetworkingClient::SendNetworkMessage(const GCMessageWrite &message)
 {
     if (!m_serverSteamId)
     {

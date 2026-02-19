@@ -50,11 +50,18 @@ private:
     void StoreGetUserData(GCMessageRead &messageRead);
     void StorePurchaseInit(GCMessageRead &messageRead);
     void StorePurchaseFinalize(GCMessageRead &messageRead);
+    void EconPreviewDataBlock(GCMessageRead &messageRead);
+    void RequestCoPlays(GCMessageRead &messageRead);
+    void CasketItemLoadContents(GCMessageRead &messageRead);
+    void CasketItemAdd(GCMessageRead &messageRead);
+    void CasketItemExtract(GCMessageRead &messageRead);
 
     void UnlockCrate(GCMessageRead &messageRead);
     void NameItem(GCMessageRead &messageRead);
     void NameBaseItem(GCMessageRead &messageRead);
     void RemoveItemName(GCMessageRead &messageRead);
+    void DeleteItem(GCMessageRead &messageRead);
+    void CraftItem(GCMessageRead &messageRead);
 
     void BuildMatchmakingHello(CMsgGCCStrike15_v2_MatchmakingGC2ClientHello &message);
     void BuildClientWelcome(CMsgClientWelcome &message, const CMsgCStrike15Welcome &csWelcome,

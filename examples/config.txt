@@ -30,3 +30,7 @@
 
 // remove keys, cases, stickers, etc. after they've been used
 "destroy_used_items"	"1"
+
+// store settings
+"currency"	"2" // euros
+"conutry"	"FI" // finland

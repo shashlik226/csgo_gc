@@ -48,7 +48,20 @@ static void ErrorMessageBox(const char *format, ...)
 
     CFRelease(messageString);
 #else
-    fprintf(stderr, "csgo_gc: %s\n", message);
+    // display a message box if we can
+    // i don't want to link to sdl2 directly nor do i want it as a build dependency
+    void *libSDL2 = dlopen("libSDL2.so", RTLD_LAZY);
+    if (libSDL2)
+    {
+        using SDL_ShowSimpleMessageBox_t = int (*)(unsigned, const char *, const char *, void *);
+        SDL_ShowSimpleMessageBox_t fuction = reinterpret_cast<SDL_ShowSimpleMessageBox_t>(dlsym(libSDL2, "SDL_ShowSimpleMessageBox"));
+        if (fuction)
+        {
+            fuction(0, "csgo_gc", message, nullptr);
+        }
+
+        dlclose(libSDL2);
+    }
 #endif
 }
 
@@ -81,7 +94,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    modulePath = "csgo_gc/" GC_LIB_DIR "/"
+    modulePath = "csgogc//gc/" GC_LIB_DIR "/"
                  "csgo_gc" GC_LIB_EXTENSION;
     InstallGC_t InstallGC = (InstallGC_t)LoadModuleAndFindSymbol(modulePath, "InstallGC");
     if (!InstallGC)

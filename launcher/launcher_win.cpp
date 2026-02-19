@@ -154,7 +154,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    _snwprintf_s(modulePath, std::size(modulePath), L"%ls\\csgo_gc\\" GC_LIB_DIR "\\"
+    _snwprintf_s(modulePath, std::size(modulePath), L"%ls\\csgogc\\gc\\" GC_LIB_DIR "\\"
                                                     "csgo_gc" GC_LIB_EXTENSION,
         baseDir);
     InstallGC_t InstallGC = (InstallGC_t)LoadModuleAndFindSymbol(modulePath, "InstallGC");

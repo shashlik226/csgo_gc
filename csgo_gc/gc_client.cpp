@@ -75,6 +75,38 @@ void ClientGC::HandleMessage(uint32_t type, const void *data, uint32_t size)
             StorePurchaseFinalize(messageRead);
             break;
 
+        case k_EMsgGCCStrike15_v2_Client2GCEconPreviewDataBlockRequest:
+            EconPreviewDataBlock(messageRead);
+            break;
+
+        // ignoring
+        case k_EMsgGCCStrike15_v2_GetEventFavorites_Request:
+            break;
+
+        // ignoring
+        case k_EMsgGCCStrike15_v2_ClientReportValidation:
+            break;
+
+        // ignoring
+        case k_EMsgGCCStrike15_v2_ClientRequestPlayersProfile:
+            break;
+
+        case k_EMsgGCCStrike15_v2_Account_RequestCoPlays:
+            RequestCoPlays(messageRead);
+            break;
+
+        case k_EMsgGCCasketItemLoadContents:
+            CasketItemLoadContents(messageRead);
+            break;
+
+        case k_EMsgGCCasketItemAdd:
+            CasketItemAdd(messageRead);
+            break;
+
+        case k_EMsgGCCasketItemExtract:
+            CasketItemExtract(messageRead);
+            break;
+
         default:
             Platform::Print("ClientGC::HandleMessage: unhandled protobuf message %s\n",
                 MessageName(messageRead.TypeUnmasked()));
@@ -99,6 +131,14 @@ void ClientGC::HandleMessage(uint32_t type, const void *data, uint32_t size)
 
         case k_EMsgGCRemoveItemName:
             RemoveItemName(messageRead);
+            break;
+
+        case k_EMsgGCDelete:
+            DeleteItem(messageRead);
+            break;
+        
+        case k_EMsgGCCraft:
+            CraftItem(messageRead);
             break;
 
         default:
@@ -132,7 +172,7 @@ void ClientGC::SendSOCacheToGameSever()
     m_inventory.BuildCacheSubscription(message, m_config.Level(), true);
 
     GCMessageWrite messageWrite{ k_ESOMsg_CacheSubscribed, message };
-    m_networking.SendMessage(messageWrite);
+    m_networking.SendNetworkMessage(messageWrite);
 }
 
 void ClientGC::HandleNetMessage(GCMessageRead &messageRead)
@@ -170,7 +210,7 @@ void ClientGC::SendMessageToGame(bool sendToGameServer, uint32_t type,
 
     if (sendToGameServer)
     {
-        m_networking.SendMessage(messageWrite);
+        m_networking.SendNetworkMessage(messageWrite);
     }
 }
 
@@ -230,11 +270,11 @@ void ClientGC::BuildClientWelcome(CMsgClientWelcome &message, const CMsgCStrike1
     m_inventory.BuildCacheSubscription(*message.add_outofdate_subscribed_caches(), m_config.Level(), false);
     message.mutable_location()->set_latitude(65.0133006f);
     message.mutable_location()->set_longitude(25.4646212f);
-    message.mutable_location()->set_country("FI"); // finland
+    message.mutable_location()->set_country(m_config.Country());
     message.set_game_data2(matchmakingHello.SerializeAsString());
     message.set_rtime32_gc_welcome_timestamp(static_cast<uint32_t>(time(nullptr)));
-    message.set_currency(2); // euros
-    message.set_txn_country_code("FI"); // finland
+    message.set_currency(m_config.Currency());
+    message.set_txn_country_code(m_config.Country()); 
 }
 
 void ClientGC::SendRankUpdate()
@@ -405,7 +445,7 @@ void ClientGC::SetItemPositions(GCMessageRead &messageRead)
         {
             // send these to the server only
             GCMessageWrite messageWrite{ k_EMsgGCItemAcknowledged, acknowledgement };
-            m_networking.SendMessage(messageWrite);
+            m_networking.SendNetworkMessage(messageWrite);
         }
 
         SendMessageToGame(true, k_ESOMsg_UpdateMultiple, update);
@@ -503,7 +543,7 @@ void ClientGC::StoreGetUserData(GCMessageRead &messageRead)
     }
 
     KeyValue priceSheet{ "price_sheet" };
-    if (!priceSheet.ParseFromFile("csgo_gc/price_sheet.txt"))
+    if (!priceSheet.ParseFromFile("csgogc/gc/price_sheet.txt"))
     {
         return;
     }
@@ -590,6 +630,121 @@ void ClientGC::StorePurchaseFinalize(GCMessageRead &messageRead)
     // done with this one
     m_transaction.id = 0;
 }
+
+// this is a bad, just say to me HOW TO CREATE FUCKING CUSTOM CVARS
+void ClientGC::EconPreviewDataBlock(GCMessageRead &messageRead)
+{
+    CMsgGCCStrike15_v2_Client2GCEconPreviewDataBlockRequest message;
+    if (!messageRead.ReadProtobuf(message))
+    {
+        Platform::Print("Parsing CMsgGCCStrike15_v2_Client2GCEconPreviewDataBlockRequest failed, ignoring\n");
+        return;
+    }
+
+    uint32_t weapIdx = static_cast<uint32_t>(message.param_s());
+    uint32_t skinIdx = static_cast<uint32_t>(message.param_a());
+    uint32_t seedIdx = static_cast<uint32_t>(message.param_d());
+
+    CMsgSOSingleObject create;
+    CMsgGCItemCustomizationNotification notification;
+    if (m_inventory.EconPreviewBlock(weapIdx, skinIdx, seedIdx, create, notification))
+    {
+        SendMessageToGame(true, k_ESOMsg_Create, create);
+        SendMessageToGame(false, k_EMsgGCItemCustomizationNotification, notification);
+    }
+}
+
+void ClientGC::CasketItemLoadContents(GCMessageRead &messageRead)
+{
+    CMsgCasketItem message;
+    if (!messageRead.ReadProtobuf(message))
+    {
+        Platform::Print("Parsing CasketItemLoadContents::CMsgCasketItem failed, ignoring\n");
+        return;
+    }
+
+    CMsgGCItemCustomizationNotification notification;
+    notification.set_request(k_EGCItemCustomizationNotification_CasketContents);
+    notification.add_item_id(message.casket_item_id());
+
+    SendMessageToGame(false, k_EMsgGCItemCustomizationNotification, notification);
+}
+
+void ClientGC::CasketItemAdd(GCMessageRead &messageRead)
+{
+    CMsgCasketItem message;
+    if (!messageRead.ReadProtobuf(message))
+    {
+        Platform::Print("Parsing CasketItemAdd::CMsgCasketItem failed, ignoring\n");
+        return;
+    }
+
+    CMsgSOSingleObject updateItem, updateCasket;
+    CMsgGCItemCustomizationNotification notification;
+    if (m_inventory.CasketItemAdd(message.casket_item_id(), message.item_item_id(), updateItem, updateCasket, notification))
+    {
+        SendMessageToGame(false, k_ESOMsg_Update, updateItem);
+        SendMessageToGame(false, k_ESOMsg_Update, updateCasket);
+        SendMessageToGame(false, k_EMsgGCItemCustomizationNotification, notification);
+    }
+}
+
+void ClientGC::CasketItemExtract(GCMessageRead &messageRead)
+{
+    CMsgCasketItem message;
+    if (!messageRead.ReadProtobuf(message))
+    {
+        Platform::Print("Parsing CasketItemExtract::CMsgCasketItem failed, ignoring\n");
+        return;
+    }
+
+    CMsgSOSingleObject updateItem, updateCasket;
+    CMsgGCItemCustomizationNotification notification;
+    if (m_inventory.CasketItemRemove(message.casket_item_id(), message.item_item_id(), updateItem, updateCasket, notification))
+    {
+        SendMessageToGame(false, k_ESOMsg_Update, updateItem);
+        SendMessageToGame(false, k_ESOMsg_Update, updateCasket);
+        SendMessageToGame(false, k_EMsgGCItemCustomizationNotification, notification);
+    }
+}
+
+void ClientGC::RequestCoPlays(GCMessageRead &messageRead)
+{
+    CMsgGCCStrike15_v2_Account_RequestCoPlays message;
+    if (!messageRead.ReadProtobuf(message))
+    {
+        Platform::Print("Parsing CMsgGCCStrike15_v2_Account_RequestCoPlays failed, ignoring\n");
+        return;
+    }
+
+    CMsgGCCStrike15_v2_Account_RequestCoPlays_Player *player = message.add_players();
+    player->set_accountid(AccountId());
+    player->set_online(true);
+    player->set_rtcoplay(1771263169);
+
+    /*
+    uint32_t players[4] = {
+        1140104601,
+        894142016,
+        1272126865,
+        1042877578
+    };
+    for (int i = 0; i < 4; i++)
+    {
+        if (AccountId() == players[i])
+            continue;
+        player = message.add_players();
+        player->set_accountid(players[i]);
+        player->set_online(true);
+        player->set_rtcoplay(1771263169);
+    }
+    */
+
+    message.set_servertime(1234567);
+
+    SendMessageToGame(false, k_EMsgGCCStrike15_v2_Account_RequestCoPlays, message);
+}
+
 
 void ClientGC::UnlockCrate(GCMessageRead &messageRead)
 {
@@ -711,5 +866,61 @@ void ClientGC::RemoveItemName(GCMessageRead &messageRead)
     else
     {
         assert(false);
+    }
+
+}
+
+void ClientGC::DeleteItem(GCMessageRead &messageRead)
+{
+    uint64_t itemId = messageRead.ReadUint64();
+    if (!messageRead.IsValid())
+    {
+        Platform::Print("Parsing DeleteItem failed, ignoring\n");
+        return;
+    }
+
+    if (itemId == 1234567890)
+    {
+        std::vector<CMsgSOSingleObject> destroyArray;
+        if (m_inventory.ClearInvenory(destroyArray))
+        {
+            for (auto &item : destroyArray)
+            {
+                if (item.has_type_id())
+                {
+                    SendMessageToGame(true, k_ESOMsg_Destroy, item);
+                }
+                else
+                {
+                    Platform::Print("Can't delete item: %llu\n", item.type_id());
+                }
+            }
+        }
+        return;
+    }
+
+    CMsgSOSingleObject destroy;
+
+    if (m_inventory.DeleteItem(itemId, destroy))
+    {
+        if (destroy.has_type_id())
+        {
+            SendMessageToGame(true, k_ESOMsg_Destroy, destroy);
+        }
+        else
+        {
+            Platform::Print("Can't delete item\n");
+        }
+    }
+}
+
+// best crafts i know
+void ClientGC::CraftItem(GCMessageRead &messageRead)
+{
+    messageRead.ReadUint32();
+
+    for (int i = 0; i < 20; i++)
+    {
+        Platform::Print("Uint%d: %d\n", i, messageRead.ReadUint32());
     }
 }
