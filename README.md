@@ -1,6 +1,7 @@
 # csgo_gc
 
 ⚠️ **Warning:** This project is incomplete and not ready for general use.
+⚠️ **Warning:** Better use with my mod for this fork https://github.com/shashlik226/csgo-for-gc
 
 ## What is this?
 In Valve games, the Game Coordinator (GC) is a backend service most notably responsible for matchmaking and inventory management (like loadouts and skins). This project redirects the GC traffic to a custom, in-process implementation.
@@ -35,19 +36,11 @@ I'm still looking for the **full** CS:GO Item Schema. If you have a relatively r
 - Matchmaking (can't be implemented without a centralized server)
 
 ## Installation
-- Download the last version of the game before CS2's release using depotdownloader:
-```
-731 718406683749122620
-732 2224497558453288476
-733 7173575548168592307
-734 3106517550092294329
-740 1512455234357538911
-```
+- Download the csgo_legacy from betas on steam
 - Download the latest artifacts for your platform from the [actions page](https://github.com/mikkokko/csgo_gc/actions)
 - Back up your existing launcher executables as they'll be overwritten (i.e. csgo.exe, srcds.exe, csgo_linux64, etc.)
 - Extract the contents of the downloaded archive to your game directory, replace the executables when prompted
-- Copy **csgo/scripts/items/items_game.txt** to **csgo_gc/item_schema.txt**
-- Launch the game. If you get the annoying VAC message box, launch the game with the -steam argument.
+- Launch the game. If you get the annoying VAC message box, launch the game with the -steam argument. And add -game csgogc/csgo to launch params
 
 ## Building
 Requirements:
