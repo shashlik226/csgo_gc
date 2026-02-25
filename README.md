@@ -1,8 +1,7 @@
 # csgo_gc
 
-⚠️ **Warning:** This project is incomplete and not ready for general use.
-
-⚠️ **Warning:** Better use with my mod for this fork https://github.com/shashlik226/csgo-for-gc
+> [!WARNING]
+> This project is incomplete and not ready for general use.
 
 ## What is this?
 In Valve games, the Game Coordinator (GC) is a backend service most notably responsible for matchmaking and inventory management (like loadouts and skins). This project redirects the GC traffic to a custom, in-process implementation.
@@ -30,18 +29,16 @@ While it's still possible to connect CS:GO to CS2's GC by spoofing the version n
 - Rest of the core features (trade ups, souvenirs, StatTrak swaps...)
 - Graphical inventory editor
 - A tool to copy your CS2 inventory over
-
-I'm still looking for the **full** CS:GO Item Schema. If you have a relatively recent copy of it and are willing to share it, let me know!
-
+- 
 ## Not planned
 - Matchmaking (can't be implemented without a centralized server)
 
 ## Installation
 - Download the csgo_legacy from betas on steam
 - Download the latest artifacts for your platform from the [actions page](https://github.com/mikkokko/csgo_gc/actions)
-- Back up your existing launcher executables as they'll be overwritten (i.e. csgo.exe, srcds.exe, csgo_linux64, etc.)
 - Extract the contents of the downloaded archive to your game directory, replace the executables when prompted
-- Launch the game. If you get the annoying VAC message box, launch the game with the -steam argument. And add -game csgogc/csgo to launch params
+- Download mod for this gc https://github.com/shashlik226/csgo-for-gc and extract to your game directory
+- Launch csgogc.exe with launch param -game csgogc/csgo. If you get the annoying VAC message box, launch the game with the -steam argument.
 
 ## Building
 Requirements:
