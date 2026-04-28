@@ -96,6 +96,10 @@ void ClientGC::HandleMessage(uint32_t type, const void *data, uint32_t size)
             StorePurchaseFinalize(messageRead);
             break;
 
+        case k_EMsgGCStatTrakSwap:
+            StatTrakSwap(messageRead);
+            break;
+
         default:
             Platform::Print("ClientGC::HandleMessage: unhandled protobuf message %s\n",
                 MessageName(messageRead.TypeUnmasked()));
@@ -601,6 +605,36 @@ void ClientGC::StorePurchaseFinalize(GCMessageRead &messageRead)
 
     // done with this one
     m_transactionId = 0;
+}
+
+void ClientGC::StatTrakSwap(GCMessageRead &messageRead)
+{
+    CMsgApplyStatTrakSwap message;
+    if (!messageRead.ReadProtobuf(message))
+    {
+        Platform::Print("Parsing CMsgApplyStatTrakSwap failed, ignoring\n");
+        return;
+    }
+
+    CMsgSOSingleObject destroy, updateItem1, updateItem2;
+    CMsgGCItemCustomizationNotification notification;
+
+    // ugh
+    if (m_inventory.StatTrakSwap(
+            message.tool_item_id(),
+            message.item_1_item_id(),
+            message.item_2_item_id(),
+            destroy,
+            updateItem1,
+            updateItem2,
+            notification))
+    {
+        SendMessageToGame(true, k_ESOMsg_Destroy, destroy);
+        SendMessageToGame(true, k_ESOMsg_Update, updateItem1);
+        SendMessageToGame(true, k_ESOMsg_Update, updateItem2);
+
+        SendMessageToGame(false, k_EMsgGCItemCustomizationNotification, notification);
+    }
 }
 
 void ClientGC::DeleteItem(GCMessageRead &messageRead)

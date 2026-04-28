@@ -1085,6 +1085,76 @@ bool Inventory::RemoveItemName(uint64_t itemId,
     return true;
 }
 
+bool Inventory::StatTrakSwap(uint64_t toolId,
+    uint64_t item1Id,
+    uint64_t item2Id,
+    CMsgSOSingleObject &destroy,
+    CMsgSOSingleObject &updateItem1,
+    CMsgSOSingleObject &updateItem2,
+    CMsgGCItemCustomizationNotification &notification)
+{
+    auto item1 = m_items.find(item1Id);
+    if (item1 == m_items.end())
+    {
+        assert(false);
+        return false;
+    }
+
+    auto item2 = m_items.find(item2Id);
+    if (item2 == m_items.end())
+    {
+        assert(false);
+        return false;
+    }
+
+    CSOEconItemAttribute *item1Attr = nullptr;
+    CSOEconItemAttribute *item2Attr = nullptr;
+
+    for (int i = 0; i < item1->second.attribute_size(); i++)
+    {
+        CSOEconItemAttribute *attribute = item1->second.mutable_attribute(i);
+        if (attribute->def_index() == ItemSchema::AttributeKillEater)
+        {
+            item1Attr = attribute;
+        }
+    }
+    for (int i = 0; i < item2->second.attribute_size(); i++)
+    {
+        CSOEconItemAttribute *attribute = item2->second.mutable_attribute(i);
+        if (attribute->def_index() == ItemSchema::AttributeKillEater)
+        {
+            item2Attr = attribute;
+        }
+    }
+
+    // temp variable
+    uint32_t item1Val = m_itemSchema.AttributeUint32(item1Attr);
+
+    m_itemSchema.SetAttributeUint32(item1Attr, m_itemSchema.AttributeUint32(item2Attr));
+    m_itemSchema.SetAttributeUint32(item2Attr, item1Val);
+
+    if (GetConfig().DestroyUsedItems())
+    {
+        auto tool = m_items.find(toolId);
+        if (tool == m_items.end())
+        {
+            assert(false);
+            return false;
+        }
+
+        DestroyItem(tool, destroy);
+    }
+
+    ToSingleObject(updateItem1, item1->second);
+    ToSingleObject(updateItem2, item2->second);
+
+    notification.add_item_id(item1Id);
+    notification.add_item_id(item2Id);
+    notification.set_request(k_EGCItemCustomizationNotification_StatTrakSwap);
+
+    return true;
+}
+
 uint64_t Inventory::PurchaseItem(uint32_t defIndex, std::vector<CMsgSOSingleObject> &update)
 {
     CSOEconItem &item = CreateItem(defIndex, ItemOriginPurchased, UnacknowledgedPurchased);
