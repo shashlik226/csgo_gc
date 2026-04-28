@@ -426,7 +426,8 @@ bool ItemSchema::CreateItemFromLootListItem(Random &random,
     }
     else
     {
-        item.set_quality(lootListItem.quality);
+        // for caskets, trade ups and other some features need to set unique item quality
+        item.set_quality(ItemSchema::QualityUnique);
     }
 
     // rarity override

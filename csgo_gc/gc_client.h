@@ -33,6 +33,9 @@ private:
     void StoreGetUserData(GCMessageRead &messageRead);
     void StorePurchaseInit(GCMessageRead &messageRead);
     void StorePurchaseFinalize(GCMessageRead &messageRead);
+    void CasketItemLoadContents(GCMessageRead &messageRead);
+    void CasketItemAdd(GCMessageRead &messageRead);
+    void CasketItemExtract(GCMessageRead &messageRead);
 
     void DeleteItem(GCMessageRead &messageRead);
     void UnlockCrate(GCMessageRead &messageRead);

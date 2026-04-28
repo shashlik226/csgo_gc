@@ -1085,6 +1085,148 @@ bool Inventory::RemoveItemName(uint64_t itemId,
     return true;
 }
 
+static void RemoveItemAttr(CSOEconItem &item, uint32_t attrIdx)
+{
+    for (auto attrib = item.mutable_attribute()->begin(); attrib != item.mutable_attribute()->end();)
+    {
+        if (attrib->def_index() == attrIdx)
+        {
+            attrib = item.mutable_attribute()->erase(attrib);
+        }
+        else
+        {
+            attrib++;
+        }
+    }
+}
+
+bool Inventory::UpdateCasket(CSOEconItem& item, int count)
+{
+    for (int i = 0; i < item.attribute_size(); i++)
+    {
+        CSOEconItemAttribute *attribute = item.mutable_attribute(i);
+        if (attribute->def_index() == ItemSchema::AttributeCasketItemsCount)
+        {
+            int value = m_itemSchema.AttributeUint32(attribute) + count;
+
+            if (value > 1000 || value < 0)
+            {
+                // casket full or empty
+                return false;
+            }
+
+            m_itemSchema.SetAttributeUint32(attribute, value);
+        }
+        else if (attribute->def_index() == ItemSchema::AttributeCasketModificationDate)
+        {
+            m_itemSchema.SetAttributeUint32(attribute, time(nullptr));
+        }
+    }
+
+    return true;
+}
+
+bool Inventory::CasketItemAdd(uint64_t casketId, 
+    uint64_t itemId, 
+    CMsgSOSingleObject &updateItem,
+    CMsgSOSingleObject &updateCasket,
+    CMsgGCItemCustomizationNotification &notification)
+{
+    auto casket = m_items.find(casketId);
+    if (casket == m_items.end())
+    {
+        assert(false);
+        return false;
+    }
+
+    auto item = m_items.find(itemId);
+    if (item == m_items.end())
+    {
+        assert(false);
+        return false;
+    }
+
+    if (casket->second.def_index() != ItemSchema::ItemCasket)
+    {
+        assert(false);
+        return false;
+    }
+
+    if (!UpdateCasket(casket->second, 1))
+    {
+        notification.set_request(k_EGCItemCustomizationNotification_CasketTooFull);
+        notification.add_item_id(casketId);
+        return true;
+    }
+
+    uint32_t low = static_cast<uint32_t>(casketId);
+    uint32_t high = static_cast<uint32_t>(casketId >> 32);
+
+    // add low and high of casket to item
+    CSOEconItemAttribute *attribute = item->second.add_attribute();
+    attribute->set_def_index(ItemSchema::AttributeCasketIdLow);
+    m_itemSchema.SetAttributeUint32(attribute, low);
+
+    attribute = item->second.add_attribute();
+    attribute->set_def_index(ItemSchema::AttributeCasketIdHigh);
+    m_itemSchema.SetAttributeUint32(attribute, high);
+
+    item->second.clear_equipped_state();
+
+    ToSingleObject(updateItem, item->second);
+    ToSingleObject(updateCasket, casket->second);
+
+    notification.set_request(k_EGCItemCustomizationNotification_CasketAdded);
+    notification.add_item_id(casketId);
+
+    return true;
+}
+
+bool Inventory::CasketItemRemove(uint64_t casketId, 
+    uint64_t itemId, 
+    CMsgSOSingleObject &updateItem,
+    CMsgSOSingleObject &updateCasket,
+    CMsgGCItemCustomizationNotification &notification)
+{
+    auto casket = m_items.find(casketId);
+    if (casket == m_items.end())
+    {
+        assert(false);
+        return false;
+    }
+
+    auto item = m_items.find(itemId);
+    if (item == m_items.end())
+    {
+        assert(false);
+        return false;
+    }
+
+    if (casket->second.def_index() != ItemSchema::ItemCasket)
+    {
+        assert(false);
+        return false;
+    }
+
+    if (!UpdateCasket(casket->second, -1))
+    {
+        notification.set_request(k_EGCItemCustomizationNotification_CasketTooFull);
+        notification.add_item_id(casketId);
+        return true;
+    }
+
+    RemoveItemAttr(item->second, ItemSchema::AttributeCasketIdLow);
+    RemoveItemAttr(item->second, ItemSchema::AttributeCasketIdHigh);
+
+    ToSingleObject(updateItem, item->second);
+    ToSingleObject(updateCasket, casket->second);
+
+    notification.set_request(k_EGCItemCustomizationNotification_CasketRemoved);
+    notification.add_item_id(casketId);
+
+    return true;
+}
+
 uint64_t Inventory::PurchaseItem(uint32_t defIndex, std::vector<CMsgSOSingleObject> &update)
 {
     CSOEconItem &item = CreateItem(defIndex, ItemOriginPurchased, UnacknowledgedPurchased);

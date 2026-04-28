@@ -179,7 +179,8 @@ public:
     {
         ItemSpray = 1348,
         ItemSprayPaint = 1349,
-        ItemPatch = 4609
+        ItemPatch = 4609,
+        ItemCasket = 1201
     };
 
     enum Attribute
@@ -223,6 +224,11 @@ public:
 
         AttributeSpraysRemaining = 232,
         AttributeSprayTintId = 233,
+
+        AttributeCasketItemsCount = 270,
+        AttributeCasketModificationDate = 271,
+        AttributeCasketIdLow = 272,
+        AttributeCasketIdHigh = 273,
     };
 
 private:
